@@ -105,6 +105,7 @@ class EnvironmentController(CybORGLogger):
         self._create_environment(scenario)
 
         self.agent_interfaces = self._create_agents(scenario, self.agents)
+        self.team_reward_calculators = scenario.get_reward_calculators()
         self.team = scenario.team_agents
         self.team_assignment = {agent_name: team_name for team_name, agent_names in scenario.team_agents.items() for agent_name in agent_names}
         self.max_bandwidth = scenario.max_bandwidth

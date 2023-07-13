@@ -5,6 +5,7 @@ from CybORG.Shared import Scenario
 from CybORG.Shared.Enums import OperatingSystemType
 from CybORG.Shared.RewardCalculator import RewardCalculator
 import pprint
+from CybORG.Simulator.Actions.AbstractActions.Impact import Impact
 
 WIN_REWARD = 0
 LOSE_REWARD = 0
@@ -58,7 +59,7 @@ class PwnRewardCalculator(RewardCalculator):
 
         # find the difference from the old privileged sessions
         total = root_sessions + system_sessions
-        reward = total #- self.old_total
+        reward = total - self.old_total
         self.old_total = total
         return round(reward, REWARD_MAX_DECIMAL_PLACES)
 
@@ -82,13 +83,49 @@ class DistruptRewardCalculator(RewardCalculator):
 
     def reset(self):
         self.ots = None
+        # This method is nerver called, be careful...
+        self.impacted_hosts = {}
+
+    # def calculate_reward(self, current_state: dict, action: dict, agent_observations: dict, done: bool):
+    #     self.impacted_hosts = {}
+    #     # currently a single 1 reward is recieved if the Impact action is successful
+    #     # TODO: Add in test to see what required services are up
+
+    #     disrupted = []
+    #     if self.ots is None:
+    #         self.ots = []
+    #         for host_info in current_state.values():
+    #             if type(host_info) is not dict:
+    #                 continue
+    #             if 'Processes' in host_info:
+    #                 for proc in host_info['Processes']:
+    #                     if proc['Process Name'] == 'OTService':
+    #                         self.ots.append(host_info['System info']['Hostname'])
+
+
+    #     for host_info in current_state.values():
+    #         working = False
+    #         if type(host_info) is not dict:
+    #             continue
+
+    #         if self.ots:
+    #             if host_info['System info']['Hostname'] in self.ots:
+    #                 if 'Processes' in host_info:
+    #                     for proc in host_info['Processes']:
+    #                         if proc['Process Name'] == 'OTService':
+    #                             working = True
+    #                     if not working:
+    #                         disrupted.append(host_info['System info']['Hostname'])
+    #     # if type(agent_action) is Impact and agent_observations[self.agent_name].data['success'] == True:
+    #     #     if agent_action.hostname not in disrupted:
+    #     #         disrupted.append(agent_action.hostname)
+    #     availability_scores = [self.mapping[self.scenario.get_host(i).get_availability_value(default='Low')] for i in disrupted]
+    #     self.impacted_hosts = dict(zip(disrupted,availability_scores))
+    #     reward = sum(availability_scores)
+    #     return round(reward, REWARD_MAX_DECIMAL_PLACES)
 
     def calculate_reward(self, current_state: dict, action: dict, agent_observations: dict, done: bool):
-        self.impacted_hosts = {}
-        # currently a single 1 reward is recieved if the Impact action is successful
-        # TODO: Add in test to see what required services are up
 
-        disrupted = []
         if self.ots is None:
             self.ots = []
             for host_info in current_state.values():
@@ -99,27 +136,30 @@ class DistruptRewardCalculator(RewardCalculator):
                         if proc['Process Name'] == 'OTService':
                             self.ots.append(host_info['System info']['Hostname'])
 
+        disrupted = []
+        if type(action.get("Red")) is Impact and agent_observations[self.agent_name].data['success'] == True:
+            for host_info in current_state.values():
+                working = False
+                if type(host_info) is not dict:
+                    continue
 
-        for host_info in current_state.values():
-            working = False
-            if type(host_info) is not dict:
-                continue
+                if self.ots:
+                    host_name = host_info['System info']['Hostname']
+                    if host_name in self.ots:
+                        if 'Processes' in host_info:
+                            for proc in host_info['Processes']:
+                                if proc['Process Name'] == 'OTService':
+                                    working = True
+                            if not working:
+                                if host_name not in self.impacted_hosts:
+                                    self.impacted_hosts[host_name] = self.mapping[self.scenario.get_host(host_name).get_availability_value(default='Low')]
+                                    disrupted.append(host_name)
+                                    break
 
-            if self.ots:
-                if host_info['System info']['Hostname'] in self.ots:
-                    if 'Processes' in host_info:
-                        for proc in host_info['Processes']:
-                            if proc['Process Name'] == 'OTService':
-                                working = True
-                        if not working:
-                            disrupted.append(host_info['System info']['Hostname'])
-        # if type(agent_action) is Impact and agent_observations[self.agent_name].data['success'] == True:
-        #     if agent_action.hostname not in disrupted:
-        #         disrupted.append(agent_action.hostname)
-        availability_scores = [self.mapping[self.scenario.get_host(i).get_availability_value(default='Low')] for i in disrupted]
-        self.impacted_hosts = dict(zip(disrupted,availability_scores))
+        availability_scores = [self.impacted_hosts[hostname] for hostname in disrupted]
         reward = sum(availability_scores)
         return round(reward, REWARD_MAX_DECIMAL_PLACES)
+
 
 
 class HybridImpactPwnRewardCalculator(RewardCalculator):

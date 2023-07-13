@@ -5,6 +5,7 @@ import numpy as np
 
 from CybORG.Agents.Wrappers.BaseWrapper import BaseWrapper
 from CybORG.Agents.Wrappers.TrueTableWrapper import TrueTableWrapper
+from CybORG.Simulator.Actions.ConcreteActions.ExploitActions.ExploitAction import ExploitAction
 
 
 class RedTableWrapper(BaseWrapper):
@@ -19,7 +20,7 @@ class RedTableWrapper(BaseWrapper):
         self.output_mode = output_mode
         self.success = None
 
-    def reset(self, agent=None):
+    def reset(self, agent="Red", seed=None):
         self.red_info = {}
         self.known_subnets = set()
         self.step_counter = -1
@@ -75,13 +76,17 @@ class RedTableWrapper(BaseWrapper):
         if name == 'DiscoverRemoteSystems':
             self._add_ips(obs)
         elif name == 'DiscoverNetworkServices':
-            ip = str(obs.popitem()[1]['Interface'][0]['IP Address'])
-            self.red_info[ip][3] = True
-        elif name == 'ExploitRemoteService':
+            if len(obs) > 1:
+                tmp = obs.popitem()
+                ip = str(tmp[1]['Interface'][0]['IP Address'])
+                self.red_info[ip][3] = True
+        elif name == 'ExploitRemoteService' or isinstance(action, ExploitAction):
             self._process_exploit(obs)
         elif name == 'PrivilegeEscalate':
             hostname = action.hostname
             self._process_priv_esc(obs, hostname)
+        elif name != 'InvalidAction':
+            raise ValueError('Action of incorrect type for RedTableWrapper, infos have not been taken into account')
 
     def _generate_name(self, datatype: str):
         self.id_tracker += 1

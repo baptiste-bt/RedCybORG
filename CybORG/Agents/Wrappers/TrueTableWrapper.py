@@ -71,7 +71,7 @@ class TrueTableWrapper(BaseWrapper):
 
                 table.add_row([subnet,str(ip),hostname,known,scanned,access])
         
-        table.sortby = 'Hostname'
+        table.sortby = 'IP Address' #'Hostname'
         table.success = success
         return table
 

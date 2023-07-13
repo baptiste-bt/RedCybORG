@@ -19,4 +19,4 @@ from .VelociraptorActionsFolder import \
 from .AbstractActions import Monitor, DiscoverNetworkServices, DiscoverRemoteSystems, ExploitRemoteService, Analyse, Remove, Restore, Misinform, PrivilegeEscalate, Impact
 from .GreenActions import GreenPingSweep, GreenPortScan, GreenConnection
 from .ConcreteActions import HTTPRFI, HTTPSRFI, SSHBruteForce, FTPDirectoryTraversal, HarakaRCE, SQLInjection, EternalBlue, BlueKeep, RemoteCodeExecutionOnSMTP, ExploitDroneVulnerability, DecoyApache, DecoyFemitter, DecoyHarakaSMPT, DecoySmss, DecoySSHD, DecoySvchost, DecoyTomcat, DecoyVsftpd, RetakeControl, SeizeControl, FloodBandwidth, RemoveOtherSessions
-from .ConcreteActions.EscalateActions import EscalateAction
+from .ConcreteActions.EscalateActions import EscalateAction, ExploreHost

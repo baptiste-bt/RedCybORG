@@ -8,6 +8,7 @@ pertaining to actions that escalate a session on a host, or occur failing that
 
 from abc import abstractmethod
 from typing import Tuple
+from ipaddress import IPv4Address
 
 from CybORG.Shared import Observation
 from CybORG.Simulator.Actions.ConcreteActions.LocalAction import LocalAction
@@ -98,17 +99,45 @@ class EscalateAction(LocalAction):
 
 class ExploreHost(LocalAction):
     """Gets information on host"""
-    def __init__(self, session: int, agent: str, target_session: int):
+    def __init__(self, session: int, agent: str, hostname: str):
         super().__init__(session, agent)
-        self.target_session = target_session
-
+        # self.ip_address = ip_address
+        self.hostname = hostname
     
 
     def execute(self, state: State) -> Observation:
+        # Get the target_session
+        # hostname = state.ip_addresses[self.ip_address]
+
+        target_sessions_list = state.hosts[self.hostname].sessions['Red']
+        if len(target_sessions_list) == 0:
+            return Observation(success=False)
+        else:
+            # self.target_session = state.sessions['Red'][target_sessions_list[0]]
+            self.target_session = target_sessions_list[0]
+
+        # Check if session and target_session exist and are owned by self.agent
         if (self.session not in state.sessions[self.agent]
                 or self.target_session not in state.sessions[self.agent]):
+            return Observation(success=False)
+        # ExploreHost action only work if access is privilegied on the target host
+        if state.sessions[self.agent][self.target_session].username not in ['root', 'SYSTEM']:
             return Observation(success=False)
         target_host = state.hosts[state.sessions[self.agent][self.target_session].hostname]
         obs = state.get_true_state(target_host.info)
         obs.set_success(True)
+
+        for host in obs.data.values():
+            try:
+                host_processes = host['Processes']
+                for proc in host_processes:
+                    if proc.get('Service Name') == 'OTService':
+                        state.sessions[self.agent][self.session].ot_service = 'OTService'
+                        break
+            except KeyError:
+                pass
+            except TypeError:
+                pass
         return obs
+    def __str__(self):
+        return f"{self.__class__.__name__} {self.hostname}"

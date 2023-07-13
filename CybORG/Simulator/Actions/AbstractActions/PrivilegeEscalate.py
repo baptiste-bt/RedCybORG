@@ -110,22 +110,22 @@ class PrivilegeEscalate(Action):
         if obs.data['success'] is not TrinaryEnum.TRUE:
             return obs
 
-        sub_action = ExploreHost(session=self.session, target_session=target_session,
-                agent=self.agent)
-        obs2 = sub_action.execute(state)
-        for host in obs2.data.values():
-            try:
-                host_processes = host['Processes']
-                for proc in host_processes:
-                    if proc.get('Service Name') == 'OTService':
-                        state.sessions[self.agent][self.session].ot_service = 'OTService'
-                        break
-            except KeyError:
-                pass
-            except TypeError:
-                pass
+        # sub_action = ExploreHost(session=self.session, target_session=target_session,
+        #         agent=self.agent)
+        # obs2 = sub_action.execute(state)
+        # for host in obs2.data.values():
+        #     try:
+        #         host_processes = host['Processes']
+        #         for proc in host_processes:
+        #             if proc.get('Service Name') == 'OTService':
+        #                 state.sessions[self.agent][self.session].ot_service = 'OTService'
+        #                 break
+        #     except KeyError:
+        #         pass
+        #     except TypeError:
+        #         pass
 
-        obs.combine_obs(obs2)
+        # obs.combine_obs(obs2)
         return obs
 
     def __str__(self):

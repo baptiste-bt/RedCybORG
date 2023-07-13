@@ -11,7 +11,7 @@ from CybORG.Shared.Enums import OperatingSystemType, SessionType, ProcessName, P
 class FixedFlatWrapper(BaseWrapper):
     def __init__(self, env: BaseWrapper = None):
         super().__init__(env)
-        self.MAX_HOSTS = 5
+        self.MAX_HOSTS = 14
         self.MAX_PROCESSES = 100
         self.MAX_CONNECTIONS = 2
         self.MAX_VULNERABILITIES = 1
@@ -219,6 +219,7 @@ class FixedFlatWrapper(BaseWrapper):
                         flat_obs.append(float(element))
                     else:
                         flat_obs.append(-1.0)
+
 
                     if "Process Type" in process:
                         if process["Process Type"] != -1:
