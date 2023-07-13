@@ -1,17 +1,23 @@
-# Copyright DST Group. Licensed under the MIT license.
+# Red CybORG
 
-# Cyber Operations Research Gym (CybORG)
+This repository is a fork from the Cyber Operations Research Gym (CybORG). It is aimed at adding several features to CybORG for training Red Team (offensive agents). It has not been updated to use the last Scenario "Drone Swarm Scenario", it is mainly focused on Scenario1b and Scenario2 from the previous editions of the CAGE Challenge.
 
-A cyber security research environment for training and development of security human and autonomous agents. Contains a common interface for both emulated, using cloud based virtual machines, and simulated network environments.
+All main features of the original version of CybORG have been preserved, you can refer to the Tutorials to learn the basics to run CybORG to train your RL agents.
 
 ## Installation
 
-Install CybORG locally using pip from the main directory that contains this readme
+Clone the repository with the following
 
 ```
+git clone https://github.com/baptiste-bt/RedCybORG.git
+```
+
+Change your active directory to RedCybORG and install RedCybORG locally using pip from the main directory that contains this readme
+
+```
+cd RedCybORG
 pip install -e .
 ```
-
 
 ## Creating the environment
 
@@ -19,38 +25,26 @@ Create a CybORG environment with the DroneSwarm Scenario that is used for CAGE C
 
 ```python
 from CybORG import CybORG
-from CybORG.Simulator.Scenarios.DroneSwarmScenarioGenerator import DroneSwarmScenarioGenerator
+from CybORG.Simulator.Scenarios.FileReaderScenarioGenerator import FileReaderScenarioGenerator
+import inspect
 
-sg = DroneSwarmScenarioGenerator()
+
+scenario = 'Scenario2' # 'Scenario1b' is also possible 
+path = str(inspect.getfile(CybORG))
+path = path[:-7] + f'/Simulator/Scenarios/scenario_files/{scenario}.yaml'
+sg = FileReaderScenarioGenerator(path)
 cyborg = CybORG(sg, 'sim')
+
 ```
-
-The default_red_agent parameter of the DroneSwarmScenarioGenerator allows you to alter the red agent behaviour. Here is an example of a red agent that randomly selects a drone to exploit and seize control of:
-
-```python
-from CybORG import CybORG
-from CybORG.Simulator.Scenarios.DroneSwarmScenarioGenerator import DroneSwarmScenarioGenerator
-from CybORG.Agents.SimpleAgents.DroneRedAgent import DroneRedAgent
-
-red_agent = DroneRedAgent
-sg = DroneSwarmScenarioGenerator(default_red_agent=red_agent)
-cyborg = CybORG(sg, 'sim')
-```
-
 
 ## Wrappers
 
 
-To alter the interface with CybORG, [wrappers](CybORG/Agents/Wrappers) are avaliable.
+To alter the interface with CybORG, [wrappers](CybORG/Agents/Wrappers) are available. The usual way of wrapping RedCybORG is using the following:
 
- 
-
+* [CybORG env](CybORG/env.py) - the default unwrapped environment. It returns dict observations.
+* [RedTableWrapper](CybORG/Agents/Wrappers/RedTableWrapper.py) - wraps the environment with a simple wrapper, returning summarized observations, with only the needed information for the red agent. If you want full observations (with all information on processes, OS, files...) you can use [FixedFlatWrapper](CybORG/Agents/Wrappers/FixedFlatWrapper.py) instead. Be careful with this wrapper which generates a huge number of features for each host which are not necessarily well encoded and may hurt training performances.
 * [OpenAIGymWrapper](CybORG/Agents/Wrappers/OpenAIGymWrapper.py) - alters the interface to conform to the OpenAI Gym specification. Requires the observation to be changed into a fixed size array.
-* [FixedFlatWrapper](CybORG/Agents/Wrappers/FixedFlatWrapper.py) - converts the observation from a dictionary format into a fixed size 1-dimensional vector of floats
-* [PettingZooParallelWrapper](CybORG/Agents/Wrappers/PettingZooParallelWrapper.py) - alters the interface to conform to the PettingZoo Parallel specification
-    * [ActionsCommsPettingZooParallelWrapper](CybORG/Agents/Wrappers/CommsPettingZooParallelWrapper.py) - Extends the PettingZoo Parallel interface to automatically communicate what action an agent performed to other agents
-    * [ObsCommsPettingZooParallelWrapper](CybORG/Agents/Wrappers/CommsPettingZooParallelWrapper.py) - Extends the PettingZoo Parallel interface to automatically communicate elements of an agent's observation to other agents
-    * [AgentCommsPettingZooParallelWrapper](CybORG/Agents/Wrappers/CommsPettingZooParallelWrapper.py) - Extends the PettingZoo Parallel interface to allow agents to select what message they want to broadcast to other agents as part of the agent's action space
 
 ## How to Use
 
@@ -60,68 +54,17 @@ The OpenAI Gym Wrapper allows interaction with a single external agent. The name
 
 ```python
 from CybORG import CybORG
-from CybORG.Simulator.Scenarios.DroneSwarmScenarioGenerator import DroneSwarmScenarioGenerator
-from CybORG.Agents.Wrappers.OpenAIGymWrapper import OpenAIGymWrapper
-from CybORG.Agents.Wrappers.FixedFlatWrapper import FixedFlatWrapper
+from CybORG.Simulator.Scenarios.FileReaderScenarioGenerator import FileReaderScenarioGenerator
+from CybORG.Agents.Wrappers.OpenAIGymWrapper import OpenAIGymWrapper, RedTableWrapper
+import inspect
 
-sg = DroneSwarmScenarioGenerator()
+scenario = 'Scenario2' 
+path = str(inspect.getfile(CybORG))
+path = path[:-7] + f'/Simulator/Scenarios/scenario_files/{scenario}.yaml'
+sg = FileReaderScenarioGenerator(path)
 cyborg = CybORG(sg, 'sim')
-agent_name = 'blue_agent_0'
-open_ai_wrapped_cyborg = OpenAIGymWrapper(agent_name=agent_name, env=FixedFlatWrapper(cyborg))
-observation, reward, done, info = open_ai_wrapped_cyborg.step(0)
+wrapped_cyborg = OpenAIGymWrapper(agent_name='Red', env=RedTableWrapper(cyborg))
+obs = wrapped_cyborg.reset()
+print(obs)
+
 ```
-
-### PettingZoo Parallel Wrapper
-
-The PettingZoo Parallel Wrapper allows multiple agents to interact with the environment simultaneously.
-
-```python
-from CybORG import CybORG
-from CybORG.Simulator.Scenarios.DroneSwarmScenarioGenerator import DroneSwarmScenarioGenerator
-from CybORG.Agents.Wrappers.PettingZooParallelWrapper import PettingZooParallelWrapper
-
-sg = DroneSwarmScenarioGenerator()
-cyborg = CybORG(sg, 'sim')
-open_ai_wrapped_cyborg = PettingZooParallelWrapper(cyborg)
-observations, rewards, dones, infos = open_ai_wrapped_cyborg.step({'blue_agent_0': 0, 'blue_agent_1': 0})
-```
-
-### Ray/RLLib wrapper  
-```python
-from CybORG import CybORG
-from CybORG.Simulator.Scenarios.DroneSwarmScenarioGenerator import DroneSwarmScenarioGenerator
-from CybORG.Agents.Wrappers.PettingZooParallelWrapper import PettingZooParallelWrapper
-from ray.rllib.env import ParallelPettingZooEnv
-from ray.tune import register_env
-
-def env_creator_CC3(env_config: dict):
-    sg = DroneSwarmScenarioGenerator()
-    cyborg = CybORG(scenario_generator=sg, environment='sim')
-    env = ParallelPettingZooEnv(PettingZooParallelWrapper(env=cyborg))
-    return env
-
-register_env(name="CC3", env_creator=env_creator_CC3)
-```
- 
-
-
-## Evaluating agent performance
-
-To evaluate an agent's performance please use the [evaluation script](CybORG/Evaluation/evaluation.py) and the [submission file](CybORG/Evaluation/submission/submission.py).
-
-Please see the [submission instructions](CybORG/Evaluation/submission/submission_readme.md) for further information on submission and evaluation of agents.
-
-## Additional Readings
-For further guidance on the CybORG environment please refer to the [tutorial notebook series.](CybORG/Tutorial)
-
-## Citing this project
-```
-@misc{cage_cyborg_2022, 
-  Title = {Cyber Operations Research Gym}, 
-  Note = {Created by Maxwell Standen, David Bowman, Son Hoang, Toby Richer, Martin Lucas, Richard Van Tassel, Phillip Vu, Mitchell Kiely, KC C., Natalie Konschnik, Joshua Collyer}, 
-  Publisher = {GitHub}, 
-  Howpublished = {\url{https://github.com/cage-challenge/CybORG}}, 
-  Year = {2022} 
-}
-```
-
